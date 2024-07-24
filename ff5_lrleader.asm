@@ -32,16 +32,22 @@ beq Exit ;not l or r
 lda $0adc
 and #$00FF
 bne Exit ;vehicle
-;lda $0bbb
+;lda $0b55
 ;AND #$0001
-;bne Exit; character "walking" frame
+;bne Exit; in battle
 lda $0ada
 and #$00FF
 cmp #$0007
 bcs Exit;currrent sprite out of bounds (boko,moogle)
-lda $0b5a 
+cmp #$0002
+bcc Exit;frog,mini
+lda $0b57 
 AND #$0001
-bne Exit;;nobattle? seems to activate in cutscene
+bne Exit;nobattle? seems to activate in cutscene
+lda $1f03
+AND #$00FF
+CMP #$00C0 ;map screens
+bne Exit ;in menu
 phy
 phx
 php
@@ -73,7 +79,6 @@ leave:
 ;jml $c003f9
 plp
 plx
-ply
 Exit:
 rtl
 
@@ -129,11 +134,8 @@ ply
 rtl
 
 
-
-
-
-
 drawbox:
+jsr ramcheck
 lda $7E ;get slot, native code
  phx
   php
@@ -222,13 +224,13 @@ emptyslot:
 exitdrawbox:
   plp
  plx
- 
 lda $7e
 inc		;do nextslot
 sta $7e ;native code
 rtl
 
 recovery:
+jsr ramcheck
   LDY !slotnum
 retryload:
   LDA $0500,Y
@@ -271,3 +273,70 @@ sta !slotnum
 exitrecovery:
 JML $c01d1d ;exit to rts
 
+
+
+ramcheck:
+phy
+phx
+pha
+php
+sep #$30
+lda !charnum
+cmp #$05
+bcs resetram
+lda !slotnum
+cmp #$F0
+beq noresetram
+cmp #$A0
+beq noresetram
+cmp #$50
+beq noresetram
+CMP #$00
+beq noresetram
+resetram:
+stz !slotnum
+stz !slotnum+1
+noresetram:
+;time to check slots and see if they match.
+ldy #$04
+checkslotloop:
+	ldx !slotnum
+	lda $0500,x
+	and #$07
+	cmp !charnum
+	beq correctslot
+	txa
+	clc
+	adc #$50
+	tax
+	dey
+	bne checkslotloop
+ldx #$00
+correctslot: ;check if they are in the party...
+lda $0500,x
+and #%01000000 ;check "not in party bit"
+beq inparty ;done!
+;okay, so they're not in the party.. let's start from the top and set it to the first "occupied" slot.
+ldx #$00
+inparty_loop:
+	lda $0500,x
+	and #%01000000 ;in party?
+	beq setnewlead
+	txa
+	clc
+	adc #$50
+	tax
+	bra inparty_loop
+setnewlead:
+inparty:
+lda $0500,x
+and #$07
+sta !charnum
+stx !slotnum
+
+plp
+pla
+plx
+ply
+rts
+;eof
