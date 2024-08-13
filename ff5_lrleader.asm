@@ -19,7 +19,7 @@ org $c01ce2
 jml recovery ;battle/menu recovery
 
 org $c01d6b
-;bra $02  ;beq to bra (skip game's default frog/mini check)
+bra $0f  ;beq to bra (skip game's default frog/mini check)
 
 ;org $c0feb0
 ;hook3:
