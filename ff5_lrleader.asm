@@ -18,6 +18,9 @@ nop			;sta $7e
 org $c01ce2
 jml recovery ;battle/menu recovery
 
+org $c01d6b
+;bra $02  ;beq to bra (skip game's default frog/mini check)
+
 ;org $c0feb0
 ;hook3:
 ;jsr $1d1e
@@ -39,8 +42,8 @@ lda $0ada
 and #$00FF
 cmp #$0007
 bcs Exit;currrent sprite out of bounds (boko,moogle)
-cmp #$0002
-bcc Exit;frog,mini
+;cmp #$0002
+;bcc frogmini;frog,mini
 lda $0b57 
 AND #$0001
 bne Exit;nobattle? seems to activate in cutscene
@@ -124,8 +127,23 @@ BIT #$40
 bne thisslot ;if party member not present, check next.
 AND #$07   ;clear flags
 sta !charnum ;save char for use elsewhere
+;check for mini/frog here
+lda $51a,x ;status flags (curable)
+and #$30
+beq notminitoad
+cmp #$20
+beq is_toad
+;else mini
+lda #$00
+bra doneminitoad
+is_toad:
+lda #$01
+bra doneminitoad
+notminitoad:
+lda !charnum
 inc
 inc
+doneminitoad:
 sta $0ada ;used in DMA for leader sprite
 inc $0ba1
 plp
@@ -134,6 +152,9 @@ ply
 rtl
 
 
+
+
+;======================================================
 drawbox:
 jsr ramcheck
 lda $7E ;get slot, native code
