@@ -3,8 +3,8 @@ hirom
 
 
 !freespace = $FAF000
-!charnum = $1f11
-!slotnum = $1f12
+!charnum = $1f15
+!slotnum = $1f13
 !dresscodestart = $f9f070
 
 org $c2feba
@@ -21,6 +21,10 @@ jml recovery ;battle/menu recovery
 org $c01d6b
 bra $0f  ;beq to bra (skip game's default frog/mini check)
 
+org $c2ae8a
+jsl loadleader
+nop
+
 ;org $c0feb0
 ;hook3:
 ;jsr $1d1e
@@ -35,9 +39,6 @@ beq Exit ;not l or r
 lda $0adc
 and #$00FF
 bne Exit ;vehicle
-;lda $0b55
-;AND #$0001
-;bne Exit; in battle
 lda $0ada
 and #$00FF
 cmp #$0007
@@ -320,8 +321,8 @@ stz !slotnum+1
 noresetram:
 ;time to check slots and see if they match.
 ldy #$04
+ldx #$00
 checkslotloop:
-	ldx !slotnum
 	lda $0500,x
 	and #$07
 	cmp !charnum
@@ -360,4 +361,62 @@ pla
 plx
 ply
 rts
+
+loadleader:
+phb
+mvn $00,$30
+plb
+php
+sep #$30
+lda $016f
+asl
+tax
+rep #$30
+lda.l saveslotptr,x
+tax
+sep #$20
+lda $200000,x
+;getslot now
+dec #2
+sta !charnum
+sep #$30
+ldy #$04
+ldx #$00
+-
+	lda $0500,x
+	and #$07
+	cmp !charnum
+	beq +
+	txa
+	clc
+	adc #$50
+	tax
+	dey
+	bne -
+ldx #$00
++ ;check if they are in the party...
+lda $0500,x
+and #%01000000 ;check "not in party bit"
+beq + ;done!
+;okay, so they're not in the party.. let's start from the top and set it to the first "occupied" slot.
+ldx #$00
+-
+	lda $0500,x
+	and #%01000000 ;in party?
+	beq +
+	txa
+	clc
+	adc #$50
+	tax
+	bra -
++
+lda $0500,x
+and #$07
+sta !charnum
+stx !slotnum
+plp
+rtl
+
+saveslotptr:
+dw $65DA,$6CDA,$73DA,$7ADA
 ;eof
